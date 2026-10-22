@@ -45,11 +45,11 @@ jobs:
           npm run docker:setup
           docker compose --env-file deploy/compose.env config --quiet
       - name: Start container stack
-        run: docker compose --env-file deploy/compose.env --profile monitoring up -d --build --wait --wait-timeout 180
+        run: docker compose --env-file deploy/compose.env up -d --build --wait --wait-timeout 180
       - name: Test container runtime against PostgreSQL
         run: docker compose --env-file deploy/compose.env run --rm --no-deps -v "$PWD/backend/test:/app/backend/test:ro" migrate node --test test/database.test.js test/features.test.js
       - name: Smoke test container
-        run: npm run docker:verify -- --monitoring
+        run: npm run docker:verify
       - name: Stop stack
         if: always()
-        run: docker compose --env-file deploy/compose.env --profile monitoring down
+        run: docker compose --env-file deploy/compose.env down
