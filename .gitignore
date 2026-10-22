@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build files
+dist/
+**/dist/
+
+# Environment variables and passwords
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Other files
+.DS_Store
+*.log
+tmp/
+deploy/compose.env
+deploy/metrics-token

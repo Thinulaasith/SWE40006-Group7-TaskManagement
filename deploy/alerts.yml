@@ -1,0 +1,17 @@
+groups:
+  - name: taskflow
+    rules:
+      - alert: TaskflowUnavailable
+        expr: up{job="taskflow"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Taskflow API metrics are unreachable
+      - alert: TaskflowServerErrors
+        expr: rate(taskflow_http_errors_total[5m]) / clamp_min(rate(taskflow_http_requests_total[5m]), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than five percent of API responses are server errors

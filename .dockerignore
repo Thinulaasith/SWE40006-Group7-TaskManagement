@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.git
+.github
+tmp
+deploy/compose.env
+deploy/metrics-token
+**/*.log
+**/test
+**/*.test.js

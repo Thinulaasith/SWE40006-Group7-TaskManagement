@@ -1,0 +1,21 @@
+{
+  "name": "group7-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:init": "node scripts/init-db.js",
+    "test": "node --test test/api.test.js test/security.test.js",
+    "db:claim-legacy": "node scripts/claim-legacy.js",
+    "db:make-admin": "node scripts/make-admin.js",
+    "demo": "node scripts/demo.js",
+    "test:integration": "node --test test/database.test.js test/features.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

@@ -1,0 +1,59 @@
+name: taskflow
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: taskflow
+      POSTGRES_DB: taskflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run docker:setup first}
+    volumes:
+      - taskflow-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+  migrate:
+    build: .
+    image: taskflow:local
+    environment:
+      DATABASE_URL: postgresql://taskflow:${POSTGRES_PASSWORD}@db:5432/taskflow
+    command: ["node", "scripts/init-db.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+  app:
+    build: .
+    image: taskflow:local
+    environment:
+      DATABASE_URL: postgresql://taskflow:${POSTGRES_PASSWORD}@db:5432/taskflow
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8080}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      METRICS_TOKEN: ${METRICS_TOKEN:?Run npm run docker:setup first}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:5000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./deploy/metrics-token:/etc/prometheus/metrics-token:ro
+      - taskflow-metrics:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  taskflow-data:
+  taskflow-metrics:

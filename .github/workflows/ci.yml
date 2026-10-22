@@ -1,0 +1,55 @@
+name: Test and build
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: taskflow_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci-only-password@localhost:5432/taskflow_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+      - name: Build container
+        run: docker build -t taskflow:ci .
+      - name: Validate Compose
+        run: |
+          npm run docker:setup
+          docker compose --env-file deploy/compose.env config --quiet
+      - name: Start container stack
+        run: docker compose --env-file deploy/compose.env --profile monitoring up -d --build --wait --wait-timeout 180
+      - name: Test container runtime against PostgreSQL
+        run: docker compose --env-file deploy/compose.env run --rm --no-deps -v "$PWD/backend/test:/app/backend/test:ro" migrate node --test test/database.test.js test/features.test.js
+      - name: Smoke test container
+        run: npm run docker:verify -- --monitoring
+      - name: Stop stack
+        if: always()
+        run: docker compose --env-file deploy/compose.env --profile monitoring down
